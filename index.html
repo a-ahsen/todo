@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>To-Do</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+.app{display:flex;height:680px;width:100%;max-width:900px;border:1px solid #e0ddd4;border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 4px 24px rgba(0,0,0,0.08);position:relative}
+.sidebar{width:220px;border-right:1px solid #e0ddd4;background:#f9f8f4;display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:16px 16px 10px;font-size:11px;font-weight:600;color:#888;letter-spacing:.07em;text-transform:uppercase}
+.project-list{flex:1;overflow-y:auto;padding:0 8px}
+.project-item{padding:8px 10px;border-radius:8px;cursor:pointer;font-size:14px;display:flex;align-items:center;gap:8px;margin-bottom:2px;color:#555}
+.project-item:hover{background:#fff}
+.project-item.active{background:#fff;color:#1a1a1a;font-weight:500}
+.project-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.add-project-btn{margin:8px;padding:8px 10px;border:1px dashed #ccc;border-radius:8px;background:none;color:#888;font-size:13px;cursor:pointer;text-align:left;width:calc(100% - 16px)}
+.add-project-btn:hover{background:#fff}
+.sidebar-tabs{display:flex;border-bottom:1px solid #e0ddd4;flex-shrink:0}
+.sidebar-tab{flex:1;padding:10px 6px;font-size:12px;font-weight:500;text-align:center;cursor:pointer;color:#999;border-bottom:2px solid transparent;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit}
+.sidebar-tab.active{color:#1a1a1a;border-bottom-color:#639922}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.main-header{padding:14px 20px 12px;border-bottom:1px solid #e0ddd4;display:flex;align-items:center;gap:10px}
+.main-title{font-size:18px;font-weight:600;flex:1}
+.sync-status{font-size:12px;color:#aaa;display:flex;align-items:center;gap:5px;flex-shrink:0}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:#ccc}
+.sync-dot.synced{background:#639922}
+.sync-dot.syncing{background:#c9960a;animation:pulse 1s infinite}
+.sync-dot.error{background:#A32D2D}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.main-body{flex:1;overflow-y:auto;padding:14px 16px}
+.topic-block{margin-bottom:8px;border:1px solid #e0ddd4;border-radius:12px;overflow:hidden}
+.topic-header{padding:10px 14px;display:flex;align-items:center;gap:8px;cursor:pointer;background:#f9f8f4;user-select:none}
+.topic-header:hover{background:#f2f1ec}
+.topic-toggle{font-size:10px;color:#aaa;transition:transform .2s;flex-shrink:0}
+.topic-toggle.open{transform:rotate(90deg)}
+.topic-title{font-size:14px;font-weight:500;flex:1}
+.topic-progress{font-size:12px;color:#aaa}
+.topic-done-btn{font-weight:600;font-size:13px}
+.topic-done-btn.active{color:#639922}
+.topic-block.done-topic .topic-header{opacity:.55}
+.topic-block.done-topic .topic-title{text-decoration:line-through;color:#aaa}
+.topic-body{padding:8px 10px;background:#fff}
+.todo-item{display:flex;align-items:flex-start;gap:8px;padding:6px 8px;border-radius:8px;margin-bottom:2px}
+.todo-item:hover{background:#f9f8f4}
+.todo-item.done-group{opacity:.5}
+.todo-check{width:16px;height:16px;border-radius:4px;border:1.5px solid #ccc;background:#fff;cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center}
+.todo-check:hover{border-color:#639922}
+.todo-check.checked{background:#639922;border-color:#639922}
+.todo-check.checked::after{content:'';width:9px;height:6px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg);margin-top:-2px;display:block}
+.todo-content{flex:1;min-width:0}
+.todo-text{font-size:13px;line-height:1.5}
+.todo-text.strikethrough{text-decoration:line-through;color:#bbb}
+.todo-note{font-size:12px;margin-top:3px;padding:3px 8px;border-radius:5px;display:inline-block}
+.note-yellow{background:#fef9ec;color:#92650a;border:1px solid #f5d87a}
+.note-blue{background:#eef5fc;color:#1a5fa0;border:1px solid #a8ceed}
+.note-green{background:#eef7e8;color:#2d6a12;border:1px solid #9fd07a}
+.note-red{background:#fef0f0;color:#8b2020;border:1px solid #f5aaaa}
+.note-purple{background:#f3f0fe;color:#3d2fa0;border:1px solid #c4b8f5}
+.todo-actions{display:flex;gap:3px;opacity:0;flex-shrink:0}
+.todo-item:hover .todo-actions{opacity:1}
+.icon-btn{background:none;border:none;cursor:pointer;padding:3px 5px;border-radius:5px;font-size:12px;color:#999}
+.icon-btn:hover{background:#f0ede6;color:#333}
+.add-todo-row{display:flex;gap:8px;padding:5px 8px;align-items:center}
+.add-todo-input{flex:1;background:none;border:none;outline:none;font-size:13px;color:#333}
+.add-todo-input::placeholder{color:#ccc}
+.add-topic-btn{margin:8px 0 4px;padding:8px 14px;border:1px dashed #ccc;border-radius:8px;background:none;color:#999;font-size:13px;cursor:pointer;width:100%}
+.add-topic-btn:hover{background:#f9f8f4}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;z-index:1000}
+.modal{background:#fff;border-radius:14px;border:1px solid #e0ddd4;padding:22px;width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.15)}
+.modal h3{font-size:15px;font-weight:600;margin-bottom:16px}
+.modal input{width:100%;padding:9px 11px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#333;font-size:13px;margin-bottom:12px;outline:none;font-family:inherit}
+.modal input:focus{border-color:#639922}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
+.btn-primary{padding:8px 18px;background:#639922;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;font-weight:500}
+.btn-primary:hover{background:#527d1a}
+.btn-cancel{padding:8px 14px;background:none;border:1px solid #ddd;border-radius:8px;font-size:13px;cursor:pointer;color:#666;font-family:inherit}
+.btn-cancel:hover{background:#f5f5f0}
+.color-swatches{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.swatch{width:22px;height:22px;border-radius:50%;cursor:pointer;border:3px solid transparent}
+.swatch.selected{border-color:#333;transform:scale(1.15)}
+.label-sm{font-size:12px;color:#888;margin-bottom:6px}
+.empty-state{text-align:center;padding:60px 20px;color:#bbb;font-size:14px}
+.empty-state .big{font-size:32px;margin-bottom:10px}
+
+/* Journal */
+.journal-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;font-family:Georgia,serif}
+.journal-nav{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 12px;border-bottom:1px solid #e0ddd4;flex-shrink:0}
+.journal-nav-btn{background:none;border:1px solid #ddd;border-radius:6px;padding:5px 12px;font-size:12px;color:#666;cursor:pointer;font-family:inherit}
+.journal-nav-btn:hover{background:#f5f5f0}
+.journal-nav-btn:disabled{opacity:.3;cursor:default}
+.journal-date{text-align:center}
+.journal-date .jday{font-size:18px;font-weight:normal}
+.journal-date .jfull{font-size:12px;color:#888;margin-top:2px}
+.journal-today-tag{display:inline-block;font-size:10px;background:#2a2a2a;color:#fff;padding:1px 7px;border-radius:99px;margin-top:3px;font-family:sans-serif}
+.journal-body{flex:1;overflow-y:auto;padding:16px 20px}
+.journal-carry{background:#fff8e7;border:1px solid #e0d5b0;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:13px;line-height:1.6}
+.journal-carry-label{font-size:10px;font-family:sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#a08c40;margin-bottom:5px}
+.journal-carry-body{color:#5a4a10;white-space:pre-wrap}
+.journal-section{margin-bottom:14px}
+.journal-section label{display:block;font-size:10px;font-family:sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-bottom:5px}
+.journal-section textarea{width:100%;border:1px solid #ddd;border-radius:8px;padding:10px 12px;font-size:14px;font-family:Georgia,serif;color:#2a2a2a;background:#fff;resize:vertical;line-height:1.65;outline:none}
+.journal-section textarea:focus{border-color:#888}
+.journal-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid #e0ddd4;flex-shrink:0}
+.journal-save-btn{background:#2a2a2a;color:#fff;border:none;border-radius:8px;padding:8px 22px;font-size:13px;font-family:Georgia,serif;cursor:pointer}
+.journal-save-btn:hover{background:#444}
+.journal-saved{font-size:12px;color:#888;font-family:sans-serif;opacity:0;transition:opacity .3s}
+.journal-saved.show{opacity:1}
+.journal-history-item:hover .journal-delete-btn{opacity:1}
+.journal-delete-btn:hover{background:#f0ede6;color:#A32D2D !important}
+
+/* Login screen */
+.login-screen{position:absolute;inset:0;background:#fff;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:50;padding:40px}
+.login-logo{font-size:40px}
+.login-title{font-size:22px;font-weight:600;color:#1a1a1a}
+.login-sub{font-size:14px;color:#888;text-align:center;max-width:280px;line-height:1.6}
+.google-btn{display:flex;align-items:center;gap:12px;padding:12px 24px;border:1px solid #ddd;border-radius:10px;background:#fff;cursor:pointer;font-size:14px;font-weight:500;color:#333;font-family:inherit;box-shadow:0 1px 4px rgba(0,0,0,0.08)}
+.google-btn:hover{background:#f8f8f8;box-shadow:0 2px 8px rgba(0,0,0,0.12)}
+.google-btn svg{width:20px;height:20px;flex-shrink:0}
+.loading-screen{position:absolute;inset:0;background:#fff;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:50}
+.spinner{width:28px;height:28px;border:2.5px solid #e0ddd4;border-top-color:#639922;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:14px;color:#888}
+
+.user-area{display:flex;align-items:center;gap:8px;padding:10px 12px;border-top:1px solid #e0ddd4;margin-top:auto}
+.user-avatar{width:28px;height:28px;border-radius:50%;object-fit:cover}
+.user-avatar-placeholder{width:28px;height:28px;border-radius:50%;background:#639922;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;flex-shrink:0}
+.user-name{font-size:12px;color:#555;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.signout-btn{background:none;border:none;cursor:pointer;font-size:11px;color:#aaa;padding:3px 6px;border-radius:5px}
+.signout-btn:hover{color:#333;background:#f0ede6}
+
+/* Setup modal */
+.setup-modal{background:#fff;border-radius:14px;border:1px solid #e0ddd4;padding:28px;width:360px;box-shadow:0 8px 32px rgba(0,0,0,0.15)}
+.setup-modal h3{font-size:16px;font-weight:600;margin-bottom:8px}
+.setup-modal p{font-size:13px;color:#666;line-height:1.6;margin-bottom:20px}
+.setup-steps{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+.setup-step{display:flex;gap:10px;align-items:flex-start}
+.step-num{width:22px;height:22px;border-radius:50%;background:#639922;color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-text{font-size:13px;color:#444;line-height:1.5}
+.step-text code{background:#f5f5f0;padding:1px 5px;border-radius:4px;font-family:monospace;font-size:12px;color:#333}
+.setup-input{width:100%;padding:9px 11px;border:1px solid #ddd;border-radius:8px;font-size:13px;font-family:inherit;outline:none;color:#333;margin-bottom:6px}
+.setup-input:focus{border-color:#639922}
+.setup-hint{font-size:11px;color:#aaa;margin-bottom:16px}
+
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#ddd;border-radius:10px}
+
+@media(max-width:600px){
+  body{padding:0;align-items:stretch}
+  .app{height:100vh;max-width:100%;border-radius:0;border:none;box-shadow:none;flex-direction:column}
+  .sidebar{width:100%;height:auto;border-right:none;border-bottom:1px solid #e0ddd4;flex-direction:column;max-height:160px}
+  .sidebar-header{padding:10px 14px 6px}
+  .project-list{display:flex;flex-direction:row;overflow-x:auto;overflow-y:hidden;padding:0 8px 8px;gap:6px}
+  .project-item{white-space:nowrap;flex-shrink:0;padding:6px 10px}
+  .add-project-btn{display:none}
+  .user-area{display:none}
+  .main{flex:1;min-height:0}
+  .login-screen,.loading-screen{border-radius:0}
+}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <!-- Loading -->
+  <div class="loading-screen" id="loading-screen">
+    <div class="spinner"></div>
+    <div class="loading-text">Yükleniyor...</div>
+  </div>
+
+  <!-- Login -->
+  <div class="login-screen" id="login-screen" style="display:none">
+    <div class="login-logo">📋</div>
+    <div class="login-title">To-Do</div>
+    <div class="login-sub">Google hesabınla giriş yap, verilerini her cihazdan eriş</div>
+    <button class="google-btn" onclick="signIn()">
+      <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Google ile giriş yap
+    </button>
+  </div>
+
+  <!-- Main UI -->
+  <div class="sidebar" id="sidebar" style="display:none">
+    <div class="sidebar-tabs">
+      <button class="sidebar-tab active" id="tab-todo" onclick="switchTab('todo')">📋 Görevler</button>
+      <button class="sidebar-tab" id="tab-journal" onclick="switchTab('journal')">📓 Günlük</button>
+    </div>
+    <div id="sidebar-todo-content" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+      <div class="sidebar-header">Projeler</div>
+      <div class="project-list" id="project-list"></div>
+      <button class="add-project-btn" onclick="showAddProject()">+ Yeni proje</button>
+    </div>
+    <div id="sidebar-journal-content" style="display:none;flex-direction:column;flex:1;overflow-y:auto;padding:8px 12px">
+      <div style="font-size:11px;font-weight:600;color:#888;letter-spacing:.07em;text-transform:uppercase;padding:10px 4px 8px">Geçmiş</div>
+      <div id="journal-history-list"></div>
+    </div>
+    <div class="user-area" id="user-area"></div>
+  </div>
+  <div class="main" id="main-panel" style="display:none">
+    <div class="main-header">
+      <div class="main-title" id="main-title">Proje seç</div>
+      <div class="sync-status" id="sync-status">
+        <div class="sync-dot" id="sync-dot"></div>
+        <span id="sync-text"></span>
+      </div>
+    </div>
+    <div class="main-body" id="main-body">
+      <div class="empty-state"><div class="big">📋</div>Soldaki listeden bir proje seç</div>
+    </div>
+  </div>
+
+  <!-- Journal Panel -->
+  <div class="journal-panel" id="journal-panel" style="display:none">
+    <div class="journal-nav">
+      <button class="journal-nav-btn" id="jbtn-prev" onclick="journalPrev()">← Önceki</button>
+      <div class="journal-date">
+        <div class="jday" id="j-day"></div>
+        <div class="jfull" id="j-full"></div>
+        <div id="j-today-tag" class="journal-today-tag" style="display:none">Bugün</div>
+      </div>
+      <button class="journal-nav-btn" id="jbtn-next" onclick="journalNext()">Sonraki →</button>
+    </div>
+    <div class="journal-body">
+      <div id="j-carry" style="display:none" class="journal-carry">
+        <div class="journal-carry-label">Dünden kalan yapılacaklar</div>
+        <div class="journal-carry-body" id="j-carry-body"></div>
+      </div>
+      <div class="journal-section">
+        <label>Ne yaptım</label>
+        <textarea id="j-done" rows="8" placeholder="Bugün ne yaptın..."></textarea>
+      </div>
+      <div class="journal-section">
+        <label>Yarına notlar / yapılacaklar</label>
+        <textarea id="j-todo" rows="4" placeholder="Yarın için..."></textarea>
+      </div>
+    </div>
+    <div class="journal-footer">
+      <button class="journal-save-btn" onclick="journalSave()">Kaydet</button>
+      <span class="journal-saved" id="j-saved">Kaydedildi ✓</span>
+    </div>
+  </div>
+</div>
+
+<div id="modal-container"></div>
+
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+// Bu CLIENT_ID'yi kendi Google Cloud projenizden almanız gerekiyor.
+// Nasıl yapılır: https://console.cloud.google.com/apis/credentials
+// 1. "OAuth 2.0 Client ID" oluştur (Web application)
+// 2. Authorized JS origins: GitHub Pages adresinizi ekle (https://kullaniciadi.github.io)
+// 3. Oluşan Client ID'yi buraya yapıştır:
+const CLIENT_ID = '416565004301-v53c9ekkhqudh3av5g69ul15meb15lrj.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
+const FILE_NAME = 'todo_data.json';
+// ─────────────────────────────────────────────────────────────────────────────
+
+const COLORS = ['#639922','#185FA5','#BA7517','#A32D2D','#534AB7','#0F6E56','#993C1D'];
+const NOTE_COLORS = ['note-green','note-blue','note-yellow','note-red','note-purple'];
+const NOTE_HEX = ['#639922','#185FA5','#c9960a','#A32D2D','#534AB7'];
+
+let state = { projects: [], activeProject: null, nextId: 1 };
+let driveFileId = null;
+let accessToken = null;
+let saveTimeout = null;
+let userInfo = null;
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+function signIn() {
+  google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: async (resp) => {
+      if(resp.error) { showError('Giriş başarısız: ' + resp.error); return; }
+      accessToken = resp.access_token;
+      localStorage.setItem('todo_access_token', accessToken);
+      await fetchUserInfo();
+      showLoading('Veriler yükleniyor...');
+      await loadFromDrive();
+      showApp();
+    }
+  }).requestAccessToken();
+}
+
+function signOut() {
+  if(accessToken) google.accounts.oauth2.revoke(accessToken, () => {});
+  accessToken = null;
+  driveFileId = null;
+  userInfo = null;
+  localStorage.removeItem('todo_access_token');
+  showLoginScreen();
+}
+
+async function fetchUserInfo() {
+  try {
+    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: 'Bearer ' + accessToken }
+    });
+    userInfo = await r.json();
+  } catch(e) {}
+}
+
+async function tryAutoLogin() {
+
+  const saved = localStorage.getItem('todo_access_token');
+  if(!saved) { hideLoading(); showLoginScreen(); return; }
+  accessToken = saved;
+  // Test token
+  try {
+    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: 'Bearer ' + accessToken }
+    });
+    if(!r.ok) throw new Error('expired');
+    userInfo = await r.json();
+    showLoading('Veriler yükleniyor...');
+    await loadFromDrive();
+    showApp();
+  } catch(e) {
+    localStorage.removeItem('todo_access_token');
+    accessToken = null;
+    hideLoading();
+    showLoginScreen();
+  }
+}
+
+// ── DRIVE ─────────────────────────────────────────────────────────────────────
+async function loadFromDrive() {
+  setSyncStatus('syncing', 'Yükleniyor...');
+  try {
+    // Find file
+    const search = await gapi('GET', `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${FILE_NAME}'&fields=files(id)`);
+    const files = search.files || [];
+    if(files.length > 0) {
+      driveFileId = files[0].id;
+      const content = await gapi('GET', `https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`);
+      if(content && content.projects) {
+        state = content;
+        if(!state.nextId) state.nextId = 1;
+        if(!state.journal) state.journal = {};
+      }
+    }
+    setSyncStatus('synced', 'Senkronize');
+  } catch(e) {
+    setSyncStatus('error', 'Bağlantı hatası');
+  }
+}
+
+async function saveToDrive() {
+  if(!accessToken) return;
+  setSyncStatus('syncing', 'Kaydediliyor...');
+  try {
+    const body = JSON.stringify(state);
+    if(driveFileId) {
+      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+        method: 'PATCH',
+        headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+        body
+      });
+    } else {
+      const meta = await gapi('POST', 'https://www.googleapis.com/drive/v3/files?fields=id', {
+        name: FILE_NAME, parents: ['appDataFolder']
+      });
+      driveFileId = meta.id;
+      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+        method: 'PATCH',
+        headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' },
+        body
+      });
+    }
+    setSyncStatus('synced', 'Kaydedildi ✓');
+    setTimeout(() => setSyncStatus('synced', ''), 2000);
+  } catch(e) {
+    setSyncStatus('error', 'Kayıt hatası');
+  }
+}
+
+function scheduleSave() {
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(saveToDrive, 1200);
+}
+
+async function gapi(method, url, body) {
+  const opts = {
+    method,
+    headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' }
+  };
+  if(body) opts.body = JSON.stringify(body);
+  const r = await fetch(url, opts);
+  if(!r.ok) throw new Error(r.status);
+  const ct = r.headers.get('content-type') || '';
+  if(ct.includes('json')) return r.json();
+  return r.text();
+}
+
+// ── UI STATE ──────────────────────────────────────────────────────────────────
+function showLoading(msg) {
+  const s = document.getElementById('loading-screen');
+  s.style.display = 'flex';
+  s.querySelector('.loading-text').textContent = msg || 'Yükleniyor...';
+}
+function hideLoading() {
+  document.getElementById('loading-screen').style.display = 'none';
+}
+function showLoginScreen() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('sidebar').style.display = 'none';
+  document.getElementById('main-panel').style.display = 'none';
+}
+function showApp() {
+  hideLoading();
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('sidebar').style.display = 'flex';
+  document.getElementById('main-panel').style.display = 'flex';
+  document.getElementById('journal-panel').style.display = 'none';
+  if(!state.journal) state.journal = {};
+  renderUserArea();
+  render();
+}
+function showError(msg) {
+  alert(msg);
+}
+
+function setSyncStatus(type, text) {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-text');
+  dot.className = 'sync-dot ' + type;
+  txt.textContent = text;
+}
+
+function renderUserArea() {
+  const el = document.getElementById('user-area');
+  if(!userInfo) { el.innerHTML = ''; return; }
+  const name = userInfo.name || userInfo.email || '';
+  const pic = userInfo.picture ? `<img class="user-avatar" src="${userInfo.picture}">` :
+    `<div class="user-avatar-placeholder">${name.charAt(0).toUpperCase()}</div>`;
+  el.innerHTML = `${pic}<span class="user-name">${esc(name)}</span><button class="signout-btn" onclick="signOut()">Çıkış</button>`;
+}
+
+// ── SETUP MODAL ───────────────────────────────────────────────────────────────
+function showSetupModal() {
+  document.getElementById('modal-container').innerHTML = `
+  <div class="modal-overlay">
+    <div class="setup-modal">
+      <h3>Google Drive Kurulumu</h3>
+      <p>Senkronizasyon için bir Google Cloud Client ID gerekiyor. Aşağıdaki adımları takip et:</p>
+      <div class="setup-steps">
+        <div class="setup-step">
+          <div class="step-num">1</div>
+          <div class="step-text"><a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:#185FA5">console.cloud.google.com/apis/credentials</a> adresine git</div>
+        </div>
+        <div class="setup-step">
+          <div class="step-num">2</div>
+          <div class="step-text">"Create Credentials" → "OAuth 2.0 Client ID" → "Web application" seç</div>
+        </div>
+        <div class="setup-step">
+          <div class="step-num">3</div>
+          <div class="step-text">Authorized JavaScript origins: GitHub Pages adresini ekle (örn. <code>https://kullaniciadi.github.io</code>)</div>
+        </div>
+        <div class="setup-step">
+          <div class="step-num">4</div>
+          <div class="step-text">Oluşan Client ID'yi HTML dosyasındaki <code>CLIENT_ID</code> satırına yapıştır</div>
+        </div>
+      </div>
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closeModal()">Tamam</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── DATA ──────────────────────────────────────────────────────────────────────
+function newId(){ return ++state.nextId; }
+function findItem(items, id){ for(const it of items){ if(it.id===id) return it; const f=findItem(it.children,id); if(f) return f; } return null; }
+function removeItem(items, id){ const i=items.findIndex(x=>x.id===id); if(i>=0){items.splice(i,1);return true;} for(const it of items){if(removeItem(it.children,id))return true;} return false; }
+function getProject(){ return state.projects.find(p=>p.id===state.activeProject); }
+function countAll(items){ return items.reduce((s,i)=>s+1+countAll(i.children),0); }
+function countDone(items){ return items.reduce((s,i)=>s+(i.done?1:0)+countDone(i.children),0); }
+function sortItems(items){ return [...items.filter(x=>!x.done),...items.filter(x=>x.done)]; }
+
+// ── TAB ───────────────────────────────────────────────────────────────────────
+let currentTab = 'todo';
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-todo').classList.toggle('active', tab==='todo');
+  document.getElementById('tab-journal').classList.toggle('active', tab==='journal');
+  document.getElementById('sidebar-todo-content').style.display = tab==='todo' ? 'flex' : 'none';
+  document.getElementById('sidebar-journal-content').style.display = tab==='journal' ? 'flex' : 'none';
+  document.getElementById('main-panel').style.display = tab==='todo' ? 'flex' : 'none';
+  document.getElementById('journal-panel').style.display = tab==='journal' ? 'flex' : 'none';
+  if(tab==='journal') { journalRender(); renderJournalHistory(); }
+}
+
+// ── JOURNAL ───────────────────────────────────────────────────────────────────
+const J_DAYS = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+const J_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+const jToday = new Date(); jToday.setHours(0,0,0,0);
+let jCur = new Date(jToday);
+
+function jIso(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function getJournalEntry(dateStr){ return (state.journal || {})[dateStr] || {done:'',todo:''}; }
+function setJournalEntry(dateStr, val){
+  if(!state.journal) state.journal = {};
+  state.journal[dateStr] = val;
+}
+
+function journalRender(){
+  const isToday = jCur.getTime() === jToday.getTime();
+  document.getElementById('j-day').textContent = jCur.getDate() + ' ' + J_MONTHS[jCur.getMonth()] + ' ' + jCur.getFullYear();
+  document.getElementById('j-full').textContent = J_DAYS[jCur.getDay()];
+  document.getElementById('j-today-tag').style.display = isToday ? 'inline-block' : 'none';
+  document.getElementById('jbtn-next').disabled = isToday;
+  const entry = getJournalEntry(jIso(jCur));
+  document.getElementById('j-done').value = entry.done || '';
+  document.getElementById('j-todo').value = entry.todo || '';
+  document.getElementById('j-saved').classList.remove('show');
+  // Carry over
+  const carry = document.getElementById('j-carry');
+  if(isToday){
+    const yesterday = new Date(jCur); yesterday.setDate(yesterday.getDate()-1);
+    const ye = getJournalEntry(jIso(yesterday));
+    if(ye.todo && ye.todo.trim()){
+      document.getElementById('j-carry-body').textContent = ye.todo.trim();
+      carry.style.display = 'block';
+    } else { carry.style.display = 'none'; }
+  } else { carry.style.display = 'none'; }
+  renderJournalHistory();
+}
+
+function journalSave(){
+  setJournalEntry(jIso(jCur), {
+    done: document.getElementById('j-done').value,
+    todo: document.getElementById('j-todo').value
+  });
+  scheduleSave();
+  renderJournalHistory();
+  const msg = document.getElementById('j-saved');
+  msg.classList.add('show');
+  setTimeout(()=>msg.classList.remove('show'), 2000);
+}
+
+function journalPrev(){ jCur.setDate(jCur.getDate()-1); journalRender(); }
+function journalNext(){ if(jCur.getTime()<jToday.getTime()){ jCur.setDate(jCur.getDate()+1); journalRender(); } }
+
+function journalGoTo(dateStr){
+  const parts = dateStr.split('-');
+  jCur = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+  journalRender();
+}
+
+function renderJournalHistory(){
+  const el = document.getElementById('journal-history-list');
+  const journal = state.journal || {};
+  const keys = Object.keys(journal).sort().reverse().slice(0,30);
+  if(!keys.length){ el.innerHTML='<div style="font-size:12px;color:#bbb;padding:4px">Henüz kayıt yok</div>'; return; }
+  el.innerHTML = keys.map(k=>{
+    const e = journal[k];
+    const parts = k.split('-');
+    const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+    const label = d.getDate() + ' ' + J_MONTHS[d.getMonth()];
+    const preview = (e.done||'').slice(0,40).replace(/\n/g,' ');
+    const active = jIso(jCur) === k;
+    return `<div class="journal-history-item" onclick="journalGoTo('${k}')" style="padding:7px 8px;border-radius:8px;cursor:pointer;margin-bottom:2px;background:${active?'#fff':'transparent'};border:${active?'1px solid #e0ddd4':'1px solid transparent'};display:flex;align-items:flex-start;gap:6px;position:relative">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:${active?'500':'400'};color:#333">${label}</div>
+        ${preview?`<div style="font-size:11px;color:#aaa;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(preview)}</div>`:''}
+      </div>
+      <button class="journal-delete-btn" onclick="event.stopPropagation();deleteJournalEntry('${k}')" title="Sil" style="background:none;border:none;cursor:pointer;color:#bbb;font-size:13px;padding:2px 5px;border-radius:4px;opacity:0;transition:opacity .15s;flex-shrink:0">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function deleteJournalEntry(dateStr){
+  if(!confirm('Bu günün kaydını silmek istiyor musun?')) return;
+  if(state.journal && state.journal[dateStr]){
+    delete state.journal[dateStr];
+    scheduleSave();
+    journalRender();
+  }
+}
+
+
+function renderSidebar(){
+  const el = document.getElementById('project-list');
+  if(!state.projects.length){
+    el.innerHTML = '<div style="padding:10px 12px;font-size:13px;color:#bbb;text-align:center">Henüz proje yok</div>';
+    return;
+  }
+  el.innerHTML = state.projects.map(p=>`
+    <div class="project-item${p.id===state.activeProject?' active':''}" onclick="selectProject(${p.id})">
+      <div class="project-dot" style="background:${p.color}"></div>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</span>
+      <button class="icon-btn" style="opacity:0.4" onclick="event.stopPropagation();deleteProject(${p.id})" title="Sil">✕</button>
+    </div>`).join('');
+}
+
+function selectProject(id){ state.activeProject=id; scheduleSave(); render(); }
+
+function renderMain(){
+  const proj = getProject();
+  if(!proj){
+    document.getElementById('main-title').textContent = 'Proje seç';
+    document.getElementById('main-body').innerHTML = '<div class="empty-state"><div class="big">📋</div>Soldaki listeden bir proje seç</div>';
+    return;
+  }
+  document.getElementById('main-title').textContent = proj.name;
+  const sortedTopics = [...proj.topics.filter(t=>!t.done), ...proj.topics.filter(t=>t.done)];
+  document.getElementById('main-body').innerHTML =
+    sortedTopics.map(t=>renderTopic(t)).join('') +
+    `<button class="add-topic-btn" onclick="addTopic()">+ Yeni konu ekle</button>`;
+}
+
+function renderTopic(t){
+  const total=countAll(t.items), done=countDone(t.items);
+  return `<div class="topic-block${t.done?' done-topic':''}">
+    <div class="topic-header" onclick="toggleTopic(${t.id})">
+      <span class="topic-toggle${t.open?' open':''}">▶</span>
+      <span class="topic-title">${esc(t.name)}</span>
+      <span class="topic-progress">${done}/${total}</span>
+      <button class="icon-btn" onclick="event.stopPropagation();renameTopic(${t.id})" title="Yeniden adlandır">✎</button>
+      <button class="icon-btn topic-done-btn${t.done?' active':''}" onclick="event.stopPropagation();toggleTopicDone(${t.id})" title="Tamamlandı işaretle">✓</button>
+      <button class="icon-btn" onclick="event.stopPropagation();deleteTopic(${t.id})" title="Sil">✕</button>
+    </div>
+    ${t.open?`<div class="topic-body">
+      ${sortItems(t.items).map(it=>renderItem(it,t.id,0)).join('')}
+      <div class="add-todo-row">
+        <div class="todo-check" style="visibility:hidden"></div>
+        <input class="add-todo-input" placeholder="+ Yeni görev ekle..." onkeydown="addItem(event,${t.id},null)">
+      </div>
+    </div>`:''}
+  </div>`;
+}
+
+function renderItem(it, topicId, depth){
+  return `<div class="todo-item${it.done?' done-group':''}" style="padding-left:${8+depth*22}px">
+    <div class="todo-check${it.done?' checked':''}" onclick="toggleDone(${topicId},${it.id})"></div>
+    <div class="todo-content">
+      <span class="todo-text${it.done?' strikethrough':''}">${esc(it.text)}</span>
+      ${it.note?`<div class="todo-note ${it.noteColor}">${esc(it.note)}</div>`:''}
+    </div>
+    <div class="todo-actions">
+      <button class="icon-btn" onclick="addNote(${topicId},${it.id})" title="Not ekle">📝</button>
+      <button class="icon-btn" onclick="addChildPrompt(${topicId},${it.id})" title="Alt görev">↳</button>
+      <button class="icon-btn" onclick="deleteItem(${topicId},${it.id})" title="Sil">✕</button>
+    </div>
+  </div>
+  ${sortItems(it.children).map(c=>renderItem(c,topicId,depth+1)).join('')}`;
+}
+
+// ── ACTIONS ───────────────────────────────────────────────────────────────────
+function toggleTopic(id){ const t=getProject().topics.find(x=>x.id===id); if(t)t.open=!t.open; scheduleSave(); renderMain(); }
+function toggleTopicDone(id){ const t=getProject().topics.find(x=>x.id===id); if(t)t.done=!t.done; scheduleSave(); renderMain(); }
+function toggleDone(topicId,itemId){ const t=getProject().topics.find(x=>x.id===topicId); const it=findItem(t.items,itemId); if(it)it.done=!it.done; scheduleSave(); renderMain(); }
+
+function addItem(e,topicId,parentId){
+  if(e.key!=='Enter') return;
+  const val=e.target.value.trim(); if(!val) return;
+  const t=getProject().topics.find(x=>x.id===topicId);
+  const ni={id:newId(),text:val,done:false,children:[],note:'',noteColor:''};
+  if(parentId){ const p=findItem(t.items,parentId); if(p)p.children.push(ni); }
+  else t.items.push(ni);
+  e.target.value=''; scheduleSave(); renderMain();
+}
+
+function addChildPrompt(topicId,parentId){
+  const text=prompt('Alt görev adı:'); if(!text||!text.trim()) return;
+  const t=getProject().topics.find(x=>x.id===topicId);
+  const p=findItem(t.items,parentId);
+  if(p)p.children.push({id:newId(),text:text.trim(),done:false,children:[],note:'',noteColor:''});
+  scheduleSave(); renderMain();
+}
+
+function deleteItem(topicId,itemId){ const t=getProject().topics.find(x=>x.id===topicId); removeItem(t.items,itemId); scheduleSave(); renderMain(); }
+function deleteTopic(id){ if(!confirm('Bu konuyu silmek istiyor musunuz?')) return; const p=getProject(); p.topics=p.topics.filter(t=>t.id!==id); scheduleSave(); renderMain(); }
+function renameTopic(id){ const t=getProject().topics.find(x=>x.id===id); const n=prompt('Konu adı:',t.name); if(n&&n.trim())t.name=n.trim(); scheduleSave(); renderMain(); }
+function addTopic(){ const n=prompt('Konu adı:'); if(!n||!n.trim()) return; getProject().topics.push({id:newId(),name:n.trim(),open:true,items:[]}); scheduleSave(); renderMain(); }
+
+function addNote(topicId,itemId){
+  const t=getProject().topics.find(x=>x.id===topicId);
+  const it=findItem(t.items,itemId);
+  showNoteModal(topicId,itemId,it);
+}
+
+function showAddProject(){
+  let selColor=COLORS[state.projects.length%COLORS.length];
+  window._selProjColor=selColor;
+  document.getElementById('modal-container').innerHTML=`<div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <h3>Yeni proje</h3>
+      <input id="proj-name-input" placeholder="Proje adı" onkeydown="if(event.key==='Enter')createProject()">
+      <div class="label-sm">Renk seç</div>
+      <div class="color-swatches">${COLORS.map(c=>`<div class="swatch${c===selColor?' selected':''}" style="background:${c}" onclick="selectProjColor(this,'${c}')"></div>`).join('')}</div>
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closeModal()">İptal</button>
+        <button class="btn-primary" onclick="createProject()">Oluştur</button>
+      </div>
+    </div>
+  </div>`;
+  setTimeout(()=>document.getElementById('proj-name-input').focus(),50);
+}
+
+function selectProjColor(el,c){ window._selProjColor=c; document.querySelectorAll('#modal-container .swatch').forEach(s=>s.classList.toggle('selected',s===el)); }
+
+function createProject(){
+  const name=document.getElementById('proj-name-input').value.trim(); if(!name) return;
+  const proj={id:newId(),name,color:window._selProjColor||COLORS[0],topics:[]};
+  state.projects.push(proj); state.activeProject=proj.id;
+  closeModal(); scheduleSave(); render();
+}
+
+function deleteProject(id){
+  if(!confirm('Projeyi silmek istiyor musunuz?')) return;
+  state.projects=state.projects.filter(p=>p.id!==id);
+  if(state.activeProject===id) state.activeProject=state.projects[0]?.id||null;
+  scheduleSave(); render();
+}
+
+function showNoteModal(topicId,itemId,it){
+  window._selNoteColor=it.noteColor||NOTE_COLORS[0];
+  document.getElementById('modal-container').innerHTML=`<div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <h3>Not ekle / düzenle</h3>
+      <input id="note-input" placeholder="Not metni..." value="${esc(it.note||'')}" onkeydown="if(event.key==='Enter')saveNote(${topicId},${itemId})">
+      <div class="label-sm">Not rengi</div>
+      <div class="color-swatches">${NOTE_COLORS.map((c,i)=>`<div class="swatch${(it.noteColor||NOTE_COLORS[0])===c?' selected':''}" style="background:${NOTE_HEX[i]}" onclick="selectNoteColor(this,'${c}')"></div>`).join('')}</div>
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closeModal()">İptal</button>
+        ${it.note?`<button class="btn-cancel" onclick="clearNote(${topicId},${itemId})">Notu sil</button>`:''}
+        <button class="btn-primary" onclick="saveNote(${topicId},${itemId})">Kaydet</button>
+      </div>
+    </div>
+  </div>`;
+  setTimeout(()=>document.getElementById('note-input').focus(),50);
+}
+
+function selectNoteColor(el,cls){ window._selNoteColor=cls; document.querySelectorAll('#modal-container .swatch').forEach(s=>s.classList.toggle('selected',s===el)); }
+function saveNote(topicId,itemId){ const val=document.getElementById('note-input').value.trim(); const t=getProject().topics.find(x=>x.id===topicId); const it=findItem(t.items,itemId); it.note=val; it.noteColor=window._selNoteColor||NOTE_COLORS[0]; closeModal(); scheduleSave(); renderMain(); }
+function clearNote(topicId,itemId){ const t=getProject().topics.find(x=>x.id===topicId); const it=findItem(t.items,itemId); it.note=''; it.noteColor=''; closeModal(); scheduleSave(); renderMain(); }
+function closeModal(){ document.getElementById('modal-container').innerHTML=''; }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function render(){ renderSidebar(); renderMain(); }
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  setTimeout(tryAutoLogin, 500);
+});
+</script>
+</body>
+</html>
