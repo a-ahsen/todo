@@ -198,10 +198,6 @@ let userInfo = null;
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 function signIn() {
-  if(CLIENT_ID === '416565004301-v53c9ekkhqudh3av5g69ul15meb15lrj.apps.googleusercontent.com') {
-    showSetupModal();
-    return;
-  }
   google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
     scope: SCOPES,
@@ -236,11 +232,7 @@ async function fetchUserInfo() {
 }
 
 async function tryAutoLogin() {
-  if(CLIENT_ID === '416565004301-v53c9ekkhqudh3av5g69ul15meb15lrj.apps.googleusercontent.com') {
-    hideLoading();
-    showLoginScreen();
-    return;
-  }
+
   const saved = localStorage.getItem('todo_access_token');
   if(!saved) { hideLoading(); showLoginScreen(); return; }
   accessToken = saved;
