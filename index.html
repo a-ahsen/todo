@@ -181,7 +181,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 // 1. "OAuth 2.0 Client ID" oluştur (Web application)
 // 2. Authorized JS origins: GitHub Pages adresinizi ekle (https://kullaniciadi.github.io)
 // 3. Oluşan Client ID'yi buraya yapıştır:
-const CLIENT_ID = 'BURAYA_CLIENT_ID_YAPISTIRINIZ';
+const CLIENT_ID = '416565004301-v53c9ekkhqudh3av5g69ul15meb15lrj.apps.googleusercontent.com';
 const SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
 const FILE_NAME = 'todo_data.json';
 // ─────────────────────────────────────────────────────────────────────────────
@@ -198,7 +198,7 @@ let userInfo = null;
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 function signIn() {
-  if(CLIENT_ID === 'BURAYA_CLIENT_ID_YAPISTIRINIZ') {
+  if(CLIENT_ID === '416565004301-v53c9ekkhqudh3av5g69ul15meb15lrj.apps.googleusercontent.com') {
     showSetupModal();
     return;
   }
@@ -236,7 +236,7 @@ async function fetchUserInfo() {
 }
 
 async function tryAutoLogin() {
-  if(CLIENT_ID === 'BURAYA_CLIENT_ID_YAPISTIRINIZ') {
+  if(CLIENT_ID === '416565004301-v53c9ekkhqudh3av5g69ul15meb15lrj.apps.googleusercontent.com') {
     hideLoading();
     showLoginScreen();
     return;
